@@ -45,6 +45,70 @@ def make_tree(size: int, seed: int) -> Node:
     return root
 
 
+def make_deep_tree(size: int, seed: int) -> Node:
+    """
+    @nlmeta
+
+    Create a deep tree of a given size.
+
+    Dependencies:
+        .node: module for tree structure.
+    """
+    if size <= 0:
+        raise ValueError("Tree size must be positive")
+
+    # Set random seed for reproducibility
+    random.seed(seed)
+
+    # Create the root node
+    root = Node(name="0")
+
+    # Keep track of the current node to add children to
+    current_node: Node = root
+
+    # Create remaining nodes in a chain
+    for i in range(1, size):
+        # Create a new node as a child of the current node
+        new_node = Node(name=str(i), parent=current_node)
+
+        # Add the new node as a child to the current node
+        current_node.add_child(new_node)
+
+        # Update current_node to be the new node for the next iteration
+        current_node = new_node
+
+    return root
+
+
+def make_wide_tree(size: int, seed: int) -> Node:
+    """
+    @nlmeta
+
+    Create a wide tree of a given size.
+
+    Dependencies:
+        .node: module for tree structure.
+    """
+    if size <= 0:
+        raise ValueError("Tree size must be positive")
+
+    # Set random seed for reproducibility
+    random.seed(seed)
+
+    # Create the root node
+    root = Node(name="0")
+
+    # Create remaining nodes as direct children of the root
+    for i in range(1, size):
+        # Create a new node with the root as parent
+        new_node = Node(name=str(i), parent=root)
+
+        # Add the new node as a child to the root
+        root.add_child(new_node)
+
+    return root
+
+
 def create_test_cases() -> dict[int, Node]:
     """
     @nlmeta
@@ -53,8 +117,11 @@ def create_test_cases() -> dict[int, Node]:
 
     Dependencies:
         make_tree: creates a test case.
+        make_deep_tree: creates a deep tree test case.
+        make_wide_tree: creates a wide tree test case.
     """
     return {
+        # Random tree test cases
         1: make_tree(5, 1),
         2: make_tree(10, 1),
         3: make_tree(20, 1),
@@ -63,6 +130,16 @@ def create_test_cases() -> dict[int, Node]:
         6: make_tree(500, 1),
         7: make_tree(500, 2),
         8: make_tree(500, 3),
+        # Deep tree test cases
+        9: make_deep_tree(50, 1),
+        10: make_deep_tree(100, 1),
+        11: make_deep_tree(200, 1),
+        12: make_deep_tree(500, 1),
+        # Wide tree test cases
+        13: make_wide_tree(50, 1),
+        14: make_wide_tree(100, 1),
+        15: make_wide_tree(200, 1),
+        16: make_wide_tree(500, 1),
     }
 
 
