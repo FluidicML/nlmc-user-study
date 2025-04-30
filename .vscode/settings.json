@@ -1,0 +1,21 @@
+{
+    "python.analysis.autoFormatStrings": true,
+    "python.analysis.diagnosticMode": "workspace",
+    "python.analysis.include": ["nlmc"],
+    "python.analysis.typeEvaluation.deprecateTypingAliases": true,
+    "python.analysis.typeEvaluation.disableBytesTypePromotions": true,
+    "python.analysis.typeEvaluation.strictDictionaryInference": true,
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        },
+      },
+    "isort.args": [
+        "--profile",
+        "black",
+        "--force-single-line-imports"
+    ],
+    "github.copilot.chat.scopeSelection": false,
+}

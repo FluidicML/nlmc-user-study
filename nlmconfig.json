@@ -1,0 +1,15 @@
+{
+    "compiler" : {
+       "types": "standard",
+       "autoformat": true,
+       "include": ["navigator/**/*.py"]
+    },
+    "llm": {
+       "provider": "anthropic",
+       "model": "claude-3-7-sonnet-latest"
+    },
+    "logging": {
+       "level": "info",
+       "file": "nlmc.log"
+    }
+ }
