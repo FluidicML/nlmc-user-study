@@ -26,10 +26,12 @@ class NodeData:
     # Height of subtree rooted at this node
     # NB: a leaf node has height 1
     height: int
-    # Number of descendants in the subtree rooted at this node
+    # Number of reachable descendants in the subtree rooted at this node
     descendants: int
     # Path from the root to this node's parent (inclusive)
     path_to_parent: list[AnnotatedNode]
+    # A node is reachable if it is active and its parent is reachable
+    reachable: bool
 
 
 class AnnotatedNode:
@@ -116,11 +118,19 @@ class NavigatorState:
         max_child_height = 0
         total_descendants = 0
 
+        # Determine if this node is reachable
+        # Root node is reachable if it's active
+        # Other nodes are reachable if they're active and their parent is reachable
+        is_root = len(path_to_parent) == 0
+        parent_reachable = True if is_root else path_to_parent[-1].data.reachable
+        node_reachable = node.active and parent_reachable
+
         # Create NodeData for this node
         node_data = NodeData(
             height=1,  # Default height for a leaf node
             descendants=0,  # Default descendants for a leaf node
             path_to_parent=path_to_parent.copy(),  # Copy the path to avoid modifying the original
+            reachable=node_reachable,
         )
 
         # Create the annotated node without setting parent or children yet
@@ -139,8 +149,10 @@ class NavigatorState:
             # Update maximum child height
             max_child_height = max(max_child_height, annotated_child.data.height)
 
-            # Add child's descendants plus the child itself to total descendants
-            total_descendants += annotated_child.data.descendants + 1
+            # Only count reachable descendants
+            if annotated_child.data.reachable:
+                # Add child's descendants plus the child itself to total descendants
+                total_descendants += annotated_child.data.descendants + 1
 
         # Update tree height for this node if it has children
         if node.children:
@@ -152,6 +164,7 @@ class NavigatorState:
                 height=height,
                 descendants=total_descendants,
                 path_to_parent=path_to_parent.copy(),
+                reachable=node_reachable,
             )
 
             # Update the annotated node with the new data
@@ -290,11 +303,12 @@ class NavigatorRenderer:
         """
         Render the node at the given coordinates.
 
-        Apply color to the node based on its status:
+        If the node is reachable, apply color to the node based on its status:
         - working: color the node yellow
         - pending changes: color the node blue
         - no changes: color the node green
         - not checked: color the node red
+        Otherwise, render the node as dimmed.
 
         Args:
             node: The node to render
@@ -304,9 +318,10 @@ class NavigatorRenderer:
         """
         node_text = str(node)
         status = node.node.status
+        reachable = node.data.reachable
 
-        # Apply attributes based on status and highlighting
-        curses_attr = curses.color_pair(status)
+        # Apply styling based on status for reachable nodes
+        curses_attr = curses.color_pair(status) if reachable else curses.A_DIM
         if highlight:
             curses_attr |= curses.A_REVERSE
 
@@ -328,7 +343,7 @@ class NavigatorRenderer:
     ) -> bool:
         """
         Measure or render a node as a terminal.
-        i.e., if the node has any children, render "node_name (+X more descendants)"
+        i.e., if the node has any children, render "node_name (+X reachable)"
 
         Args:
             node: The node to render
@@ -353,7 +368,7 @@ class NavigatorRenderer:
         # If the node has children, add the descendant count information
         if node.data.descendants:
             descendant_count = node.data.descendants
-            descendant_text = f" (+{descendant_count} more descendants)"
+            descendant_text = f" (+{descendant_count} reachable)"
         else:
             descendant_text = ""
 
@@ -933,7 +948,6 @@ class NavigatorRenderer:
                 # Render the ellipses or other string
                 self.stdscr.addstr(0, current_x, part)
                 current_x += len(str(part))
-
         return True
 
     def render_parent_path(self, state: NavigatorState) -> None:
