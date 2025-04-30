@@ -28,6 +28,8 @@ class NodeData:
     height: int
     # Number of descendants in the subtree rooted at this node
     descendants: int
+    # Path from the root to this node's parent (inclusive)
+    path_to_parent: list[AnnotatedNode]
 
 
 class AnnotatedNode:
@@ -53,7 +55,7 @@ class NavigatorState:
     """State of the navigator."""
 
     def __init__(self, root: Node):
-        self.root: AnnotatedNode = self._annotate_tree(root)
+        self.root: AnnotatedNode = self._annotate_tree(root, [])
         self.current_node: AnnotatedNode = self.root
 
     def handle_keypress(self, key: Key) -> AnnotatedNode | None:
@@ -99,6 +101,7 @@ class NavigatorState:
     def _annotate_tree(
         self,
         node: Node,
+        path_to_parent: list[AnnotatedNode],
     ) -> AnnotatedNode:
         """
         Recursively annotates a tree with NodeData.
@@ -113,10 +116,24 @@ class NavigatorState:
         max_child_height = 0
         total_descendants = 0
 
+        # Create NodeData for this node
+        node_data = NodeData(
+            height=1,  # Default height for a leaf node
+            descendants=0,  # Default descendants for a leaf node
+            path_to_parent=path_to_parent.copy(),  # Copy the path to avoid modifying the original
+        )
+
+        # Create the annotated node without setting parent or children yet
+        annotated_node = AnnotatedNode(node=node, data=node_data)
+
+        # Create the path for children by adding this node to the path
+        path_for_children = path_to_parent.copy()
+        path_for_children.append(annotated_node)
+
         # Process each child
         for child in node.children:
-            # Recursively annotate the child
-            annotated_child = self._annotate_tree(child)
+            # Recursively annotate the child with the updated path
+            annotated_child = self._annotate_tree(child, path_for_children)
             annotated_children.append(annotated_child)
 
             # Update maximum child height
@@ -125,17 +142,20 @@ class NavigatorState:
             # Add child's descendants plus the child itself to total descendants
             total_descendants += annotated_child.data.descendants + 1
 
-        # Calculate tree height for this node
-        height = max_child_height + 1
+        # Update tree height for this node if it has children
+        if node.children:
+            height = max_child_height + 1
 
-        # Create NodeData for this node
-        node_data = NodeData(
-            height=height,
-            descendants=total_descendants,
-        )
+            # Update the NodeData with the calculated values
+            # Since NodeData is frozen, we need to create a new instance
+            node_data = NodeData(
+                height=height,
+                descendants=total_descendants,
+                path_to_parent=path_to_parent.copy(),
+            )
 
-        # Create the annotated node without setting parent or children yet
-        annotated_node = AnnotatedNode(node=node, data=node_data)
+            # Update the annotated node with the new data
+            annotated_node.data = node_data
 
         # Set up parent-child relationships for the annotated nodes
         for child in annotated_children:
@@ -803,6 +823,117 @@ class NavigatorRenderer:
         # If all criteria are equal, the configurations are equivalent
         return 0
 
+    def measure_or_render_path_with_ellipses(
+        self,
+        prefix_path: list[AnnotatedNode],
+        suffix_path: list[AnnotatedNode],
+        mode: Mode = Mode.MEASURE,
+    ) -> bool:
+        """
+        Try to render a path with ellipses in between.
+        If there are no nodes in the suffix, do not render ellipses.
+
+        Args:
+            prefix_path: The nodes to render before the ellipses. Cannot be empty.
+            suffix_path: The nodes to render after the ellipses
+            mode: Render mode (MEASURE or RENDER)
+
+        Returns:
+            True if rendering was successful, False otherwise
+
+        Raises:
+            ValueError: If the prefix path is empty
+        """
+        if not prefix_path:
+            raise ValueError("Prefix path cannot be empty")
+
+        separator = " -> "
+        ellipses_str = "..."
+        _, max_x = self.stdscr.getmaxyx()
+
+        # Assemble the full path string
+        path_parts = prefix_path.copy()
+        if suffix_path:
+            path_parts.append(ellipses_str)
+            path_parts.extend(suffix_path)
+        path_str = separator.join([str(part) for part in path_parts])
+
+        # Check if the path string fits within the terminal width
+        if len(path_str) >= max_x:
+            return False
+
+        # If the path fits, render it
+        if mode == Mode.RENDER:
+            self.stdscr.addstr(0, 0, path_str)
+
+        return True
+
+    def render_parent_path(self, state: NavigatorState) -> None:
+        """
+        Render the path to the parent node on the top line, joined by "->".
+
+        Algorithm:
+        - First try to render the full path.
+        - If the full path is too long, shorten it by eliding the middle of the path with ellipses ("...").
+        - Start with just the root and parent, then progressively lengthen the prefix and suffix.
+
+        Important: there should always be the same number of nodes before and after the ellipses.
+
+        Example:
+            root -> node1 -> ... -> node2 -> parent
+
+        Args:
+            state: The current navigator state
+
+        Raises:
+            ValueError: If the path is too long to render, or if the current node has no parent.
+        """
+        # Check if the current node has a parent
+        if not state.current_node.parent:
+            raise ValueError("Current node has no parent")
+
+        # Get the path to the parent from the current node's data
+        path_to_parent = state.current_node.data.path_to_parent
+
+        # Try to render the full path first (no ellipses needed)
+        if self.measure_or_render_path_with_ellipses(path_to_parent, [], Mode.MEASURE):
+            # If it fits, render it
+            self.measure_or_render_path_with_ellipses(path_to_parent, [], Mode.RENDER)
+            return
+
+        # Can't shorten the path if it has only 2 nodes
+        if len(path_to_parent) <= 2:
+            raise ValueError("Path is too long to render.")
+
+        # Progressively add more nodes to both sides
+        max_nodes_per_side = (len(path_to_parent) - 1) // 2
+
+        # Keep track of the last successful configuration
+        last_successful_prefix = None
+        last_successful_suffix = None
+
+        for i in range(1, max_nodes_per_side + 1):
+            # Add one more node to each side
+            new_prefix = path_to_parent[: i + 1]
+            new_suffix = path_to_parent[-(i + 1) :]
+
+            # Try measuring with the new paths
+            if self.measure_or_render_path_with_ellipses(
+                new_prefix, new_suffix, Mode.MEASURE
+            ):
+                # Save this configuration as the last successful one
+                last_successful_prefix = new_prefix
+                last_successful_suffix = new_suffix
+            else:
+                # If this configuration doesn't fit, use the last successful one
+                break
+
+        # Render the last successful configuration if we found one
+        if last_successful_prefix is not None and last_successful_suffix is not None:
+            self.measure_or_render_path_with_ellipses(
+                last_successful_prefix, last_successful_suffix, Mode.RENDER
+            )
+
     def render_parent(self, state: NavigatorState) -> None:
         """
         Render the parent node.
@@ -902,9 +1033,8 @@ class NavigatorRenderer:
                     best_result.configuration, mode=Mode.RENDER
                 )
 
-                # Render the parent node on the top line
-                parent_text = str(state.current_node.parent)
-                self.stdscr.addstr(0, 0, parent_text)
+                # Render the parent path
+                self.render_parent_path(state)
 
             except curses.error:
                 # Handle potential curses errors (e.g., writing outside terminal boundaries)
