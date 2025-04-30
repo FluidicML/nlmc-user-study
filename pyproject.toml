@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "navigator"
+version = "0.1.0"
+description = ""
+authors = ["Charles Jin <charles@fluidicml.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+nlmc = {path = "../nlmc", develop = true}
+
+[tool.poetry.scripts]
+navigator = "navigator.cli:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
