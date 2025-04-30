@@ -5,6 +5,7 @@ from __future__ import annotations
 import random
 
 from .node import Node
+from .node import NodeStatus
 
 
 def make_tree(size: int, seed: int) -> Node:
@@ -18,7 +19,7 @@ def make_tree(size: int, seed: int) -> Node:
     random.seed(seed)
 
     # Create the root node
-    root = Node(name="0")
+    root = Node(name="0", status=random.choice(list(NodeStatus)))
 
     # List to keep track of all nodes for random parent selection
     nodes: list[Node] = [root]
@@ -29,7 +30,11 @@ def make_tree(size: int, seed: int) -> Node:
         parent = random.choice(nodes)
 
         # Create a new node with the selected parent
-        new_node = Node(name=str(i), parent=parent)
+        new_node = Node(
+            name=str(i),
+            status=random.choice(list(NodeStatus)),
+            parent=parent,
+        )
 
         # Add the new node as a child to the parent
         parent.add_child(new_node)
@@ -51,7 +56,7 @@ def make_deep_tree(size: int, seed: int) -> Node:
     random.seed(seed)
 
     # Create the root node
-    root = Node(name="0")
+    root = Node(name="0", status=random.choice(list(NodeStatus)))
 
     # Keep track of the current node to add children to
     current_node: Node = root
@@ -59,7 +64,9 @@ def make_deep_tree(size: int, seed: int) -> Node:
     # Create remaining nodes in a chain
     for i in range(1, size):
         # Create a new node as a child of the current node
-        new_node = Node(name=str(i), parent=current_node)
+        new_node = Node(
+            name=str(i), status=random.choice(list(NodeStatus)), parent=current_node
+        )
 
         # Add the new node as a child to the current node
         current_node.add_child(new_node)
@@ -81,12 +88,14 @@ def make_wide_tree(size: int, seed: int) -> Node:
     random.seed(seed)
 
     # Create the root node
-    root = Node(name="0")
+    root = Node(name="0", status=random.choice(list(NodeStatus)))
 
     # Create remaining nodes as direct children of the root
     for i in range(1, size):
         # Create a new node with the root as parent
-        new_node = Node(name=str(i), parent=root)
+        new_node = Node(
+            name=str(i), status=random.choice(list(NodeStatus)), parent=root
+        )
 
         # Add the new node as a child to the root
         root.add_child(new_node)

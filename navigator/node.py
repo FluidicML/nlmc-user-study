@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+from enum import IntEnum
+
+
+class NodeStatus(IntEnum):
+    """Status of a node."""
+
+    WORKING = 1
+    PENDING_CHANGES = 2
+    NO_CHANGES = 3
+    NOT_CHECKED = 4
+
 
 class Node:
     """A simple node class for demonstration purposes."""
@@ -9,9 +20,11 @@ class Node:
     def __init__(
         self,
         name: str,
+        status: NodeStatus,
         parent: Node | None = None,
     ):
         self.name = name
+        self.status = status
         self.parent = parent
         self.children: list[Node] = []
 
