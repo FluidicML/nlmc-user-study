@@ -21,11 +21,13 @@ class Node:
         self,
         name: str,
         status: NodeStatus,
+        active: bool,
         parent: Node | None = None,
     ):
         self.name = name
         self.status = status
         self.parent = parent
+        self.active = active
         self.children: list[Node] = []
 
     def add_child(self, child: Node):
