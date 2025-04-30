@@ -273,6 +273,77 @@ class NavigatorRenderer:
     def __init__(self, stdscr: curses.window, max_children: int = 100):
         self.max_children = max_children
         self.stdscr = stdscr
+        self.init_colors()
+
+    def init_colors(self):
+        """
+        @nlmeta
+
+        Initialize ALL color pairs for rendering.
+
+        Dependencies:
+            .node.NodeStatus: class for node status.
+            context: NavigatorRenderer.render_node: Read the docstring carefully to ensure all colors are set up correctly.
+        """
+        # Check if terminal supports colors
+        if not curses.has_colors():
+            return
+
+        # Start color mode
+        curses.start_color()
+
+        # Define color pairs for each node status
+        # Use pair numbers that match NodeStatus enum values for easy reference
+
+        # WORKING status (1) - Yellow
+        curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+
+        # PENDING_CHANGES status (2) - Blue
+        curses.init_pair(2, curses.COLOR_BLUE, curses.COLOR_BLACK)
+
+        # NO_CHANGES status (3) - Green
+        curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
+
+        # NOT_CHECKED status (4) - Red
+        curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
+
+    def render_node(self, node: AnnotatedNode, x: int, y: int, highlight: bool = False):
+        """
+        @nlmeta
+
+        Render the node at the given coordinates.
+
+        Apply color to the node based on its status:
+        - working: color the node yellow
+        - pending changes: color the node blue
+        - no changes: color the node green
+        - not checked: color the node red
+
+        Args:
+            node: The node to render
+            x: X coordinate
+            y: Y coordinate
+            highlight: Whether to highlight the node
+
+        Dependencies:
+            .node: module for tree structure and status codes.
+            NavigatorRenderer.init_colors: function that initializes all necessary color pairs.
+        """
+        node_text = str(node)
+        status = node.node.status
+
+        # Apply attributes based on status and highlighting
+        curses_attr = curses.color_pair(status)
+        if highlight:
+            curses_attr |= curses.A_REVERSE
+
+        self.stdscr.attron(curses_attr)
+
+        # Render the node
+        self.stdscr.addstr(y, x, node_text)
+
+        # Reset attributes
+        self.stdscr.attroff(curses_attr)
 
     def measure_or_render_terminal(
         self,
@@ -300,6 +371,7 @@ class NavigatorRenderer:
 
         Dependencies:
             context: NavigatorRenderer.measure_or_render_tree: uses this function to render the terminal.
+            NavigatorRenderer.render_node: use this function to render nodes.
         """
         # Get terminal dimensions
         max_y, max_x = self.stdscr.getmaxyx()
@@ -325,13 +397,8 @@ class NavigatorRenderer:
         if mode == Mode.MEASURE:
             return True
 
-        # Render the node name with highlighting
-        if highlight:
-            self.stdscr.attron(curses.A_REVERSE)
-            self.stdscr.addstr(y, x, node_name)
-            self.stdscr.attroff(curses.A_REVERSE)
-        else:
-            self.stdscr.addstr(y, x, node_name)
+        # Render the node name with proper coloring and highlighting
+        self.render_node(node, x, y, highlight)
 
         if descendant_text:
             # Calculate position for descendant text (right after the node name)
@@ -446,6 +513,7 @@ class NavigatorRenderer:
             context: NavigatorRenderer.measure_tallest_tree: uses this function to measure the tallest tree possible.
             NavigatorRenderer.measure_or_render_terminal: used to render a node as a terminal (rather than a tree).
             NavigatorRenderer.render_connectors: use to render connectors after tree structure has been set.
+            NavigatorRenderer.render_node: use this function to render nodes.
 
         Args:
             node: The node to render
@@ -473,7 +541,8 @@ class NavigatorRenderer:
         if x + len(node_text) >= max_x or y >= max_y:
             return None
         if mode == Mode.RENDER:
-            self.stdscr.addstr(y, x, node_text)
+            # Render the node itself with proper coloring
+            self.render_node(node, x, y)
 
         # Calculate position for children
         child_x = x + offset + 1
@@ -617,6 +686,7 @@ class NavigatorRenderer:
         Dependencies:
             NavigatorRenderer.measure_tallest_tree: use this function to measure the tallest tree.
             NavigatorRenderer.measure_or_render_tree: use this function to render the tree.
+            NavigatorRenderer.render_node: use this function to overwrite and highlight the current node.
         """
         y, _ = self.stdscr.getmaxyx()
 
@@ -636,9 +706,7 @@ class NavigatorRenderer:
         )
 
         # Overwrite and highlight the current node
-        self.stdscr.attron(curses.A_REVERSE)
-        self.stdscr.addstr(0, 0, str(node))
-        self.stdscr.attroff(curses.A_REVERSE)
+        self.render_node(node, 0, 0, highlight=True)
 
     def measure_or_render_siblings(
         self,
@@ -684,6 +752,7 @@ class NavigatorRenderer:
             NavigatorRenderer.measure_tallest_tree: use this function to measure the tallest tree for the current node.
                 use max_rows to leave space for non-visible siblings placeholder.
             context: NavigatorRenderer.render_parent: calls this function to search for a valid rendering configuration.
+            NavigatorRenderer.render_node: use this function to render node_text.
         """
         # Get terminal dimensions
         max_y, max_x = self.stdscr.getmaxyx()
@@ -811,9 +880,10 @@ class NavigatorRenderer:
         ):
             return None
         if mode == Mode.RENDER:
-            self.stdscr.attron(curses.A_REVERSE)
-            self.stdscr.addstr(current_node_y, child_x, str(configuration.current_node))
-            self.stdscr.attroff(curses.A_REVERSE)
+            # Overwrite and highlight the current node using render_node
+            self.render_node(
+                configuration.current_node, child_x, current_node_y, highlight=True
+            )
 
         # Create and return the RenderResult
         return RenderResult(
@@ -911,6 +981,7 @@ class NavigatorRenderer:
 
         Dependencies:
             Context: NavigatorRenderer.render_parent_path: uses this function to render the path with ellipses.
+            NavigatorRenderer.render_node: use this function to render nodes.
         """
         if not prefix_path:
             raise ValueError("Prefix path cannot be empty")
@@ -934,7 +1005,7 @@ class NavigatorRenderer:
             if current_x + len(node_str) >= max_x:
                 return False
             if mode == Mode.RENDER:
-                self.stdscr.addstr(0, current_x, node_str)
+                self.render_node(node, current_x, 0)
             current_x += len(node_str)
 
         if not suffix_path:
@@ -967,9 +1038,8 @@ class NavigatorRenderer:
             if current_x + len(node_str) >= max_x:
                 return False
             if mode == Mode.RENDER:
-                self.stdscr.addstr(0, current_x, node_str)
+                self.render_node(node, current_x, 0)
             current_x += len(node_str)
-
         return True
 
     def render_parent_path(self, state: NavigatorState) -> None:
@@ -1192,7 +1262,6 @@ class NavigatorRenderer:
         Dependencies:
             NavigatorRenderer.render_parent: use this function to render the parent node, if there is one.
             NavigatorRenderer.render_tallest_tree: use this function to render the tallest tree when there is no parent.
-                Remember to add highlighting for the current node in this case.
             NavigatorRenderer.render_footer: use this function to render the footer.
         """
         # Clear the screen
