@@ -40,6 +40,7 @@ class AnnotatedNode:
         parent: AnnotatedNode | None = None,
         children: list[AnnotatedNode] | None = None,
     ):
+        #
         self.node = node
         self.data = data
         self.parent = parent
@@ -169,6 +170,7 @@ class RenderConfiguration:
     non_visible_siblings_after: int
     sibling_depth: int
 
+    #
     @classmethod
     def from_node(
         cls,
@@ -376,12 +378,14 @@ class NavigatorRenderer:
         # Get terminal dimensions
         max_y, max_x = self.stdscr.getmaxyx()
 
+        #
         if any(y >= max_y for y in ys):
             raise ValueError("Y coordinates out of bounds")
 
         if x + offset + 1 >= max_x:
             raise ValueError("X coordinate out of bounds")
 
+        #
         ys = sorted(ys)  # Sort the y coordinates to ensure correct order
 
         # Create horizontal connectors for each child
@@ -446,6 +450,7 @@ class NavigatorRenderer:
             Otherwise, returns a tuple of the number of rows used and the actual depth of the tree rendered.
         """
         try:
+            #
             # Clear the screen below the current node before rendering
             self.erase_below(y)
 
@@ -652,6 +657,7 @@ class NavigatorRenderer:
                     sibling, child_x, current_y, configuration.sibling_depth, offset
                 )
                 if sibling_result is None:
+                    #
                     return None
 
                 # Unpack the result tuple - only need the height
@@ -699,6 +705,7 @@ class NavigatorRenderer:
                     sibling, child_x, current_y, configuration.sibling_depth, offset
                 )
                 if sibling_result is None:
+                    #
                     return None
 
                 # Unpack the result tuple - only need the height
@@ -834,6 +841,7 @@ class NavigatorRenderer:
         """
         # Ensure the current node has a parent
         if not state.current_node.parent:
+            #
             raise ValueError("Current node must have a parent")
 
         # Get terminal dimensions

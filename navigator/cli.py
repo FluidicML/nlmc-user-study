@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument(
         "graph",
         type=int,
+        #
         choices=list(range(1, 9)),
         help="Select a graph to visualize",
     )

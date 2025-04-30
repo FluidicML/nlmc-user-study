@@ -21,6 +21,7 @@ class Node:
 
         Add a child node.
         """
+        #
         if child.parent is not None and child.parent is not self:
             raise ValueError("Child already has a parent")
 
