@@ -239,6 +239,90 @@ class NavigatorRenderer:
         self.max_children = max_children
         self.stdscr = stdscr
 
+    def get_path_to_node(self, node: AnnotatedNode) -> list[AnnotatedNode]:
+        """
+        Get the path from root to node.
+
+        Args:
+            node: The node to get the path to
+
+        Returns:
+            A list of nodes from root to the given node
+        """
+        path = []
+        current = node
+
+        # Traverse up to the root
+        while current:
+            path.append(current)
+            current = current.parent
+
+        # Reverse to get path from root to node
+        path.reverse()
+        return path
+
+    def format_path_with_ellipses(
+        self, path: list[AnnotatedNode], max_width: int
+    ) -> str:
+        """
+        Format a path with arrows and ellipses if needed.
+
+        If the path is too long to fit in max_width, shorten it by eliding the middle
+        with ellipses, keeping the same number of nodes before and after the ellipses.
+
+        Args:
+            path: List of nodes in the path
+            max_width: Maximum width available for the path
+
+        Returns:
+            A formatted string representation of the path
+        """
+        if not path:
+            return ""
+
+        # Format each node as a string
+        node_strs = [str(node) for node in path]
+
+        # Define the arrow separator
+        arrow = " -> "
+
+        # Calculate the full path with arrows
+        full_path = arrow.join(node_strs)
+
+        # If it fits, return it
+        if len(full_path) <= max_width:
+            return full_path
+
+        # If it doesn't fit, we need to truncate with ellipses
+        # Use proper arrow separators around the ellipses
+        ellipsis = " -> ... -> "
+
+        # Calculate how many nodes we can show on each side of the ellipsis
+        # Start with a conservative estimate
+        total_nodes = len(node_strs)
+        for nodes_per_side in range(total_nodes // 2, 0, -1):
+            # Calculate length with this many nodes on each side
+            left_side = arrow.join(node_strs[:nodes_per_side])
+            right_side = arrow.join(node_strs[-nodes_per_side:])
+
+            # Check if this configuration fits
+            if len(left_side) + len(ellipsis) + len(right_side) <= max_width:
+                return left_side + ellipsis + right_side
+
+        # If we can't even show one node on each side, just show first and last
+        first = node_strs[0]
+        last = node_strs[-1]
+        if len(first) + len(ellipsis) + len(last) <= max_width:
+            return first + ellipsis + last
+
+        # If even that doesn't fit, truncate the last node
+        available = max_width - len(first) - len(ellipsis)
+        if available > 3:  # Ensure we have at least a few characters
+            return first + ellipsis + last[:available]
+
+        # Last resort: just return the first node truncated
+        return first[:max_width]
+
     def measure_or_render_terminal(
         self,
         node: AnnotatedNode,
@@ -830,7 +914,7 @@ class NavigatorRenderer:
             raise ValueError("Current node must have a parent")
 
         # Get terminal dimensions
-        max_y, _ = self.stdscr.getmaxyx()
+        max_y, max_x = self.stdscr.getmaxyx()
 
         # Each sibling needs at least 1 row, plus 1 row each for parent, current node, and bottom row
         max_sibling_rows = max(0, max_y - 2)
@@ -902,9 +986,18 @@ class NavigatorRenderer:
                     best_result.configuration, mode=Mode.RENDER
                 )
 
-                # Render the parent node on the top line
-                parent_text = str(state.current_node.parent)
-                self.stdscr.addstr(0, 0, parent_text)
+                # Get the path to the parent node
+                parent = state.current_node.parent
+                path_to_parent = self.get_path_to_node(parent)
+
+                # Format the path with ellipses if needed
+                # Leave a small margin on the right for better readability
+                parent_path_text = self.format_path_with_ellipses(
+                    path_to_parent, max_x - 2
+                )
+
+                # Render the parent path on the top line
+                self.stdscr.addstr(0, 0, parent_path_text)
 
             except curses.error:
                 # Handle potential curses errors (e.g., writing outside terminal boundaries)
