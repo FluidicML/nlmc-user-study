@@ -15,6 +15,14 @@ def get_random_status() -> NodeStatus:
     return random.choice(list(NodeStatus))
 
 
+def get_random_active() -> bool:
+    """
+    Return a random active state (True or False) with a higher probability of True.
+    Using a 70% chance of being active to avoid too many inactive nodes.
+    """
+    return random.random() < 0.7  # 70% chance of being active
+
+
 def make_tree(size: int, seed: int) -> Node:
     """
     Create a random tree of a given size.
@@ -25,8 +33,9 @@ def make_tree(size: int, seed: int) -> Node:
     # Set random seed for reproducibility
     random.seed(seed)
 
-    # Create the root node with a random status
-    root = Node(name="0", status=get_random_status())
+    # Create the root node with a random status and active state
+    # Making the root always active to ensure at least some nodes are reachable
+    root = Node(name="0", status=get_random_status(), active=True)
 
     # List to keep track of all nodes for random parent selection
     nodes: list[Node] = [root]
@@ -36,8 +45,13 @@ def make_tree(size: int, seed: int) -> Node:
         # Randomly select a parent from existing nodes
         parent = random.choice(nodes)
 
-        # Create a new node with the selected parent and a random status
-        new_node = Node(name=str(i), parent=parent, status=get_random_status())
+        # Create a new node with the selected parent, random status and active state
+        new_node = Node(
+            name=str(i),
+            parent=parent,
+            status=get_random_status(),
+            active=get_random_active(),
+        )
 
         # Add the new node as a child to the parent
         parent.add_child(new_node)
@@ -57,12 +71,15 @@ def make_deep_tree(depth: int) -> Node:
         raise ValueError("Tree depth must be positive")
 
     # Create the root node with a random status
-    root = Node(name="root", status=get_random_status())
+    # Making the root always active to ensure at least some nodes are reachable
+    root = Node(name="root", status=get_random_status(), active=True)
     current_node = root
 
     # Create a linear chain of nodes
     for i in range(1, depth):
-        new_node = Node(name=f"level_{i}", status=get_random_status())
+        new_node = Node(
+            name=f"level_{i}", status=get_random_status(), active=get_random_active()
+        )
         current_node.add_child(new_node)
         current_node = new_node
 
@@ -78,11 +95,14 @@ def make_wide_tree(width: int) -> Node:
         raise ValueError("Tree width must be positive")
 
     # Create the root node with a random status
-    root = Node(name="root", status=get_random_status())
+    # Making the root always active to ensure at least some nodes are reachable
+    root = Node(name="root", status=get_random_status(), active=True)
 
-    # Add children directly to the root with random statuses
+    # Add children directly to the root with random statuses and active states
     for i in range(width):
-        child = Node(name=f"child_{i}", status=get_random_status())
+        child = Node(
+            name=f"child_{i}", status=get_random_status(), active=get_random_active()
+        )
         root.add_child(child)
 
     return root

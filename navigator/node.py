@@ -22,11 +22,13 @@ class Node:
         name: str,
         parent: Node | None = None,
         status: NodeStatus = NodeStatus.NOT_CHECKED,
+        active: bool = True,
     ):
         self.name = name
         self.parent = parent
         self.children: list[Node] = []
         self.status = status
+        self.active = active
 
     def add_child(self, child: Node):
         """

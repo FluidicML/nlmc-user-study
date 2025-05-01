@@ -70,6 +70,8 @@ class AnnotatedNode:
         self.data = data
         self.parent = parent
         self.children = children or []
+        # Cache for reachable descendants count
+        self._reachable_descendants = None
 
     def __repr__(self):
         return self.node.__repr__()
@@ -78,6 +80,44 @@ class AnnotatedNode:
     def status(self) -> NodeStatus:
         """Get the status of the node."""
         return self.node.status
+
+    @property
+    def is_reachable(self) -> bool:
+        """
+        Check if this node is reachable.
+        A node is reachable if the entire path from the root to the node is active.
+        """
+        # If this node is not active, it's not reachable
+        if not self.node.active:
+            return False
+
+        # If this is the root (no parent), it's reachable if it's active
+        if self.parent is None:
+            return self.node.active
+
+        # Otherwise, it's reachable if its parent is reachable
+        return self.parent.is_reachable
+
+    def count_reachable_descendants(self) -> int:
+        """
+        Count the number of reachable descendants in the subtree.
+        """
+        # Use cached result if available
+        if self._reachable_descendants is not None:
+            return self._reachable_descendants
+
+        # Calculate reachable descendants
+        result = 0
+        for child in self.children:
+            # Only count child if it's reachable
+            if child.is_reachable:
+                result += 1
+                # And add its reachable descendants
+                result += child.count_reachable_descendants()
+
+        # Cache the result
+        self._reachable_descendants = result
+        return result
 
 
 class NavigatorState:
@@ -364,7 +404,7 @@ class NavigatorRenderer:
     ) -> bool:
         """
         Measure or render a node as a terminal.
-        i.e., if the node has any children, render "node_name (+X more descendants)"
+        i.e., if the node has any children, render "node_name (+X more reachable)"
 
         Args:
             node: The node to render
@@ -386,10 +426,13 @@ class NavigatorRenderer:
         # Format the node name
         node_name = str(node)
 
-        # If the node has children, add the descendant count information
+        # If the node has children, add the reachable descendant count information
         if node.data.descendants:
-            descendant_count = node.data.descendants
-            descendant_text = f" (+{descendant_count} more descendants)"
+            reachable_descendants = node.count_reachable_descendants()
+            if reachable_descendants > 0:
+                descendant_text = f" (+{reachable_descendants} more reachable)"
+            else:
+                descendant_text = ""
         else:
             descendant_text = ""
 
@@ -403,15 +446,20 @@ class NavigatorRenderer:
         # Get the color based on node status
         color = get_color_from_status(node.status)
 
+        # Check if node is reachable to determine if we should dim it
+        attrs = color
+        if not node.is_reachable:
+            attrs = curses.A_DIM
+
         # Render the node name with highlighting and color
         if highlight:
-            self.stdscr.attron(curses.A_REVERSE | color)
+            self.stdscr.attron(curses.A_REVERSE | attrs)
             self.stdscr.addstr(y, x, node_name)
-            self.stdscr.attroff(curses.A_REVERSE | color)
+            self.stdscr.attroff(curses.A_REVERSE | attrs)
         else:
-            self.stdscr.attron(color)
+            self.stdscr.attron(attrs)
             self.stdscr.addstr(y, x, node_name)
-            self.stdscr.attroff(color)
+            self.stdscr.attroff(attrs)
 
         if descendant_text:
             # Calculate position for descendant text (right after the node name)
@@ -538,12 +586,18 @@ class NavigatorRenderer:
         if x + len(node_text) >= max_x or y >= max_y:
             return None
         if mode == Mode.RENDER:
-            # Render the node itself with appropriate color
+            # Render the node itself with appropriate color and reachability
             node_text = str(node)
             color = get_color_from_status(node.status)
-            self.stdscr.attron(color)
+
+            # Apply dimming if node is not reachable
+            attrs = color
+            if not node.is_reachable:
+                attrs = curses.A_DIM
+
+            self.stdscr.attron(attrs)
             self.stdscr.addstr(y, x, node_text)
-            self.stdscr.attroff(color)
+            self.stdscr.attroff(attrs)
 
         # Calculate position for children
         child_x = x + offset + 1
@@ -1059,12 +1113,16 @@ class NavigatorRenderer:
                                 found_node = node
                                 break
 
-                        # If found, apply corresponding color
+                        # If found, apply corresponding color and dimming based on reachability
                         if found_node:
                             color = get_color_from_status(found_node.status)
-                            self.stdscr.attron(color)
+                            attrs = color
+                            if not found_node.is_reachable:
+                                attrs = curses.A_DIM
+
+                            self.stdscr.attron(attrs)
                             self.stdscr.addstr(0, current_x, part)
-                            self.stdscr.attroff(color)
+                            self.stdscr.attroff(attrs)
                         else:
                             # Fallback if node not found
                             self.stdscr.addstr(0, current_x, part)
