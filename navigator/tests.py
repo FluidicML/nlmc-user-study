@@ -9,12 +9,7 @@ from .node import Node
 
 def make_tree(size: int, seed: int) -> Node:
     """
-    @nlmeta
-
     Create a random tree of a given size.
-
-    Dependencies:
-        .node: module for tree structure.
     """
     if size <= 0:
         raise ValueError("Tree size must be positive")
@@ -47,12 +42,7 @@ def make_tree(size: int, seed: int) -> Node:
 
 def create_test_cases() -> dict[int, Node]:
     """
-    @nlmeta
-
     Create test cases for the user study.
-
-    Dependencies:
-        make_tree: creates a test case.
     """
     return {
         1: make_tree(5, 1),

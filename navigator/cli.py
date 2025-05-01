@@ -9,12 +9,7 @@ from .tests import TESTCASES
 
 def parse_args():
     """
-    @nlmeta
-
     Parse command-line arguments.
-
-    Dependencies:
-        .tests.create_test_cases: how test cases are created.
     """
     parser = argparse.ArgumentParser(description="User Study CLI")
     parser.add_argument(

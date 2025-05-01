@@ -58,8 +58,6 @@ class NavigatorState:
 
     def handle_keypress(self, key: Key) -> AnnotatedNode | None:
         """
-        @nlmeta
-
         Handle arrow keypress events.
 
         Key.LEFT: Move to parent
@@ -69,10 +67,6 @@ class NavigatorState:
 
         Returns:
             The new current node or None if exiting.
-
-        Dependencies:
-            .node.Node: class for tree structure.
-            Key: enum for key codes.
         """
         if key == Key.QUIT:
             return None
@@ -107,17 +101,10 @@ class NavigatorState:
         node: Node,
     ) -> AnnotatedNode:
         """
-        @nlmeta
-
         Recursively annotates a tree with NodeData.
 
         Returns:
             The annotated version of the (tree rooted at the) node.
-
-        Dependencies:
-            .node: module for tree structure.
-            NodeData: dataclass for node data.
-            AnnotatedNode: class for annotated nodes.
         """
         # Recursively annotate all children
         annotated_children: list[AnnotatedNode] = []
@@ -178,8 +165,6 @@ class RenderConfiguration:
         sibling_height: int,
     ) -> RenderConfiguration:
         """
-        @nlmeta
-
         Create a RenderConfiguration from a node and parameters about visible siblings.
 
         Args:
@@ -263,8 +248,6 @@ class NavigatorRenderer:
         highlight: bool = False,
     ) -> bool:
         """
-        @nlmeta
-
         Measure or render a node as a terminal.
         i.e., if the node has any children, render "node_name (+X more descendants)"
 
@@ -277,9 +260,6 @@ class NavigatorRenderer:
 
         Returns:
             True if the node was rendered successfully, False otherwise.
-
-        Dependencies:
-            context: NavigatorRenderer.measure_or_render_tree: uses this function to render the terminal.
         """
         # Get terminal dimensions
         max_y, max_x = self.stdscr.getmaxyx()
@@ -324,8 +304,6 @@ class NavigatorRenderer:
 
     def render_connectors(self, x: int, ys: list[int], offset: int = 4) -> None:
         """
-        @nlmeta
-
         Render connectors for children.
         - Because we do not know the size or shape of the tree in advance, the connectors should be drawn after the tree has been rendered.
         - The connector should be "├──── " for all but the last child, and "└──── " for the last child (assuming the default offset of 4; adjust as necessary).
@@ -361,10 +339,6 @@ class NavigatorRenderer:
             x: X coordinate for the parent.
             ys: List of Y coordinates for where the children branch off.
             offset: Horizontal offset for the length of the connector
-
-        Dependencies:
-            context: NavigatorRenderer.measure_or_render_tree: uses this function to draw the vertical connectors after the tree structure has been set.
-            context: NavigatorRenderer.render_parent: uses this function to draw the vertical connectors after the tree structure has been set.
         """
         if not ys:
             return
@@ -410,8 +384,6 @@ class NavigatorRenderer:
         offset: int = 4,
     ) -> tuple[int, int] | None:
         """
-        @nlmeta
-
         Measure or render a node and its children to a maximum height.
 
         Algorithm:
@@ -419,13 +391,6 @@ class NavigatorRenderer:
         - If the node has children, recursively render up to self.max_children children at height - 1.
         - If the node has more than self.max_children children, render a placeholder as an additional child "(+X more children)".
         - Return the number of rows used, or -1 for failutre.
-
-        Dependencies:
-            context: NavigatorRenderer.measure_or_render_siblings: uses this function to render the full display.
-                Refer also to the documentation for render format details.
-            context: NavigatorRenderer.measure_tallest_tree: uses this function to measure the tallest tree possible.
-            NavigatorRenderer.measure_or_render_terminal: used to render a node as a terminal (rather than a tree).
-            NavigatorRenderer.render_connectors: use to render connectors after tree structure has been set.
 
         Args:
             node: The node to render
@@ -519,8 +484,6 @@ class NavigatorRenderer:
         offset: int = 4,
     ) -> tuple[int, int] | None:
         """
-        @nlmeta
-
         Measure the tallest tree that can be rendered.
 
         Algorithm:
@@ -539,9 +502,6 @@ class NavigatorRenderer:
             y: Y coordinate
             max_rows: Maximum number of rows to use for rendering
             offset: Connector length for rendering children
-
-        Dependencies:
-            NavigatorRenderer.measure_or_render_tree: use this function to render the tree at a given height.
 
         Returns:
             None if the tree cannot be rendered.
@@ -587,16 +547,10 @@ class NavigatorRenderer:
         node: AnnotatedNode,
     ):
         """
-        @nlmeta
-
         Render the tallest tree possible for the current node.
 
         Args:
             node: The node to render
-
-        Dependencies:
-            NavigatorRenderer.measure_tallest_tree: use this function to measure the tallest tree.
-            NavigatorRenderer.measure_or_render_tree: use this function to render the tree.
         """
         y, _ = self.stdscr.getmaxyx()
 
@@ -626,8 +580,6 @@ class NavigatorRenderer:
         mode: Mode,
     ) -> RenderResult | None:
         """
-        @nlmeta
-
         Render the parent node with a specific configuration of siblings.
 
         Example:
@@ -656,14 +608,6 @@ class NavigatorRenderer:
         Returns:
             If successful, a RenderResult object containing the configuration, current node height, and position.
             Else, return None.
-
-        Dependencies:
-            RenderConfiguration: class for parent configuration.
-            RenderResult: class for rendering result.
-            NavigatorRenderer.measure_or_render_tree: use this function to render siblings at a given height.
-            NavigatorRenderer.measure_tallest_tree: use this function to measure the tallest tree for the current node.
-                use max_rows to leave space for non-visible siblings placeholder.
-            context: NavigatorRenderer.render_parent: calls this function to search for a valid rendering configuration.
         """
         # Get terminal dimensions
         max_y, max_x = self.stdscr.getmaxyx()
@@ -809,8 +753,6 @@ class NavigatorRenderer:
         result2: RenderResult,
     ) -> int:
         """
-        @nlmeta
-
         Compare two render results.
 
         Args:
@@ -819,11 +761,6 @@ class NavigatorRenderer:
 
         Returns:
             1 if result1 is better, -1 if result2 is better, 0 if they are equal
-
-        Dependencies:
-            RenderResult: dataclass for a result.
-            context: NavigatorRenderer.render_parent: uses this function to compare configurations.
-                See also documentation for which configurations are preferred.
         """
         # 1. Compare current node height - prefer taller rendering
         if result1.current_node_height > result2.current_node_height:
@@ -868,8 +805,6 @@ class NavigatorRenderer:
 
     def render_parent(self, state: NavigatorState) -> None:
         """
-        @nlmeta
-
         Render the parent node.
 
         We should always render the number of non-visible siblings before and after the current node as special "+X more siblings" leafs
@@ -889,14 +824,6 @@ class NavigatorRenderer:
 
         Args:
             state: The current navigator state
-
-        Dependencies:
-            RenderConfiguration: class for parent configuration.
-            RenderResult: class for rendering result.
-            NavigatorRenderer.measure_or_render_siblings: use to try rendering different configurations of siblings.
-                See also documentation for how to render the parent.
-            NavigatorRenderer.render_connectors: use to render connectors after tree structure has been set.
-            NavigatorRenderer.compare_results: use this function to compare configurations.
         """
         # Ensure the current node has a parent
         if not state.current_node.parent:
@@ -985,12 +912,7 @@ class NavigatorRenderer:
 
     def render_footer(self) -> None:
         """
-        @nlmeta
-
         Render navigation footer (justify right).
-
-        Dependencies:
-            NavigatorState.handle_keypress: this function handles keypresses.
         """
         max_y, max_x = self.stdscr.getmaxyx()
         footer_text = 'arrow keys to navigate, "ESC" or "q" to quit.'
@@ -1007,15 +929,7 @@ class NavigatorRenderer:
 
     def render(self, state: NavigatorState) -> None:
         """
-        @nlmeta
-
         Render the current state of the navigator.
-
-        Dependencies:
-            NavigatorRenderer.render_parent: use this function to render the parent node, if there is one.
-            NavigatorRenderer.render_tallest_tree: use this function to render the tallest tree when there is no parent.
-                Remember to add highlighting for the current node in this case.
-            NavigatorRenderer.render_footer: use this function to render the footer.
         """
         # Clear the screen
         self.stdscr.clear()
@@ -1036,16 +950,9 @@ class NavigatorRenderer:
 
 def navigation_loop(stdscr: curses.window, root: Node):
     """
-    @nlmeta
-
     Navigation loop for a node.
 
     ESC and 'q' keys exit the navigator.
-
-    Dependencies:
-        .node.Node: class for tree structure.
-        NavigatorState: class for navigator state.
-        NavigatorRenderer: class for rendering the navigator.
     """
     state = NavigatorState(root)
     renderer = NavigatorRenderer(stdscr)
