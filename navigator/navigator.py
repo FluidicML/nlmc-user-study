@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from .node import Node
+from .node import NodeStatus
 
 
 class Key(Enum):
@@ -17,6 +18,31 @@ class Key(Enum):
     LEFT = 3
     RIGHT = 4
     QUIT = 5
+
+
+# Define color pairs for each status
+def init_colors():
+    """Initialize color pairs for node statuses."""
+    curses.start_color()
+    curses.use_default_colors()
+    # Define color pairs: (pair_number, foreground, background)
+    curses.init_pair(1, curses.COLOR_YELLOW, -1)  # Working: Yellow
+    curses.init_pair(2, curses.COLOR_BLUE, -1)  # Pending: Blue
+    curses.init_pair(3, curses.COLOR_GREEN, -1)  # No Changes: Green
+    curses.init_pair(4, curses.COLOR_RED, -1)  # Not Checked: Red
+
+
+def get_color_from_status(status: NodeStatus) -> int:
+    """Get the color pair number from a node status."""
+    if status == NodeStatus.WORKING:
+        return curses.color_pair(1)
+    elif status == NodeStatus.PENDING_CHANGES:
+        return curses.color_pair(2)
+    elif status == NodeStatus.NO_CHANGES:
+        return curses.color_pair(3)
+    elif status == NodeStatus.NOT_CHECKED:
+        return curses.color_pair(4)
+    return 0  # Default color
 
 
 @dataclass(frozen=True)
@@ -47,6 +73,11 @@ class AnnotatedNode:
 
     def __repr__(self):
         return self.node.__repr__()
+
+    @property
+    def status(self) -> NodeStatus:
+        """Get the status of the node."""
+        return self.node.status
 
 
 class NavigatorState:
@@ -369,13 +400,18 @@ class NavigatorRenderer:
         if mode == Mode.MEASURE:
             return True
 
-        # Render the node name with highlighting
+        # Get the color based on node status
+        color = get_color_from_status(node.status)
+
+        # Render the node name with highlighting and color
         if highlight:
-            self.stdscr.attron(curses.A_REVERSE)
+            self.stdscr.attron(curses.A_REVERSE | color)
             self.stdscr.addstr(y, x, node_name)
-            self.stdscr.attroff(curses.A_REVERSE)
+            self.stdscr.attroff(curses.A_REVERSE | color)
         else:
+            self.stdscr.attron(color)
             self.stdscr.addstr(y, x, node_name)
+            self.stdscr.attroff(color)
 
         if descendant_text:
             # Calculate position for descendant text (right after the node name)
@@ -502,7 +538,12 @@ class NavigatorRenderer:
         if x + len(node_text) >= max_x or y >= max_y:
             return None
         if mode == Mode.RENDER:
+            # Render the node itself with appropriate color
+            node_text = str(node)
+            color = get_color_from_status(node.status)
+            self.stdscr.attron(color)
             self.stdscr.addstr(y, x, node_text)
+            self.stdscr.attroff(color)
 
         # Calculate position for children
         child_x = x + offset + 1
@@ -819,9 +860,11 @@ class NavigatorRenderer:
         ):
             return None
         if mode == Mode.RENDER:
-            self.stdscr.attron(curses.A_REVERSE)
+            # Overwrite and highlight the current node with its color
+            color = get_color_from_status(configuration.current_node.status)
+            self.stdscr.attron(curses.A_REVERSE | color)
             self.stdscr.addstr(current_node_y, child_x, str(configuration.current_node))
-            self.stdscr.attroff(curses.A_REVERSE)
+            self.stdscr.attroff(curses.A_REVERSE | color)
 
         # Create and return the RenderResult
         return RenderResult(
@@ -996,8 +1039,42 @@ class NavigatorRenderer:
                     path_to_parent, max_x - 2
                 )
 
-                # Render the parent path on the top line
-                self.stdscr.addstr(0, 0, parent_path_text)
+                # Render the parent path on the top line with colors
+                # Split the path text by arrows to color each node separately
+                parts = parent_path_text.split(" -> ")
+                current_x = 0
+
+                for i, part in enumerate(parts):
+                    if part == "...":
+                        # Render ellipsis without coloring
+                        self.stdscr.addstr(0, current_x, part)
+                        current_x += len(part)
+                    else:
+                        # For actual node parts, find the corresponding node to get its color
+                        # This is a simplification - the exact matching might need to be improved
+                        # Find nodes in the path that match this text
+                        found_node = None
+                        for node in path_to_parent:
+                            if str(node) == part:
+                                found_node = node
+                                break
+
+                        # If found, apply corresponding color
+                        if found_node:
+                            color = get_color_from_status(found_node.status)
+                            self.stdscr.attron(color)
+                            self.stdscr.addstr(0, current_x, part)
+                            self.stdscr.attroff(color)
+                        else:
+                            # Fallback if node not found
+                            self.stdscr.addstr(0, current_x, part)
+
+                        current_x += len(part)
+
+                    # Add arrow separator if this isn't the last part
+                    if i < len(parts) - 1:
+                        self.stdscr.addstr(0, current_x, " -> ")
+                        current_x += 4  # Length of " -> "
 
             except curses.error:
                 # Handle potential curses errors (e.g., writing outside terminal boundaries)
@@ -1049,6 +1126,9 @@ def navigation_loop(stdscr: curses.window, root: Node):
     """
     state = NavigatorState(root)
     renderer = NavigatorRenderer(stdscr)
+
+    # Initialize colors
+    init_colors()
 
     # Main navigation loop
     while True:

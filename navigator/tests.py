@@ -5,6 +5,14 @@ from __future__ import annotations
 import random
 
 from .node import Node
+from .node import NodeStatus
+
+
+def get_random_status() -> NodeStatus:
+    """
+    Return a random NodeStatus value.
+    """
+    return random.choice(list(NodeStatus))
 
 
 def make_tree(size: int, seed: int) -> Node:
@@ -17,8 +25,8 @@ def make_tree(size: int, seed: int) -> Node:
     # Set random seed for reproducibility
     random.seed(seed)
 
-    # Create the root node
-    root = Node(name="0")
+    # Create the root node with a random status
+    root = Node(name="0", status=get_random_status())
 
     # List to keep track of all nodes for random parent selection
     nodes: list[Node] = [root]
@@ -28,8 +36,8 @@ def make_tree(size: int, seed: int) -> Node:
         # Randomly select a parent from existing nodes
         parent = random.choice(nodes)
 
-        # Create a new node with the selected parent
-        new_node = Node(name=str(i), parent=parent)
+        # Create a new node with the selected parent and a random status
+        new_node = Node(name=str(i), parent=parent, status=get_random_status())
 
         # Add the new node as a child to the parent
         parent.add_child(new_node)
@@ -48,13 +56,13 @@ def make_deep_tree(depth: int) -> Node:
     if depth <= 0:
         raise ValueError("Tree depth must be positive")
 
-    # Create the root node
-    root = Node(name="root")
+    # Create the root node with a random status
+    root = Node(name="root", status=get_random_status())
     current_node = root
 
     # Create a linear chain of nodes
     for i in range(1, depth):
-        new_node = Node(name=f"level_{i}")
+        new_node = Node(name=f"level_{i}", status=get_random_status())
         current_node.add_child(new_node)
         current_node = new_node
 
@@ -69,12 +77,12 @@ def make_wide_tree(width: int) -> Node:
     if width <= 0:
         raise ValueError("Tree width must be positive")
 
-    # Create the root node
-    root = Node(name="root")
+    # Create the root node with a random status
+    root = Node(name="root", status=get_random_status())
 
-    # Add children directly to the root
+    # Add children directly to the root with random statuses
     for i in range(width):
-        child = Node(name=f"child_{i}")
+        child = Node(name=f"child_{i}", status=get_random_status())
         root.add_child(child)
 
     return root

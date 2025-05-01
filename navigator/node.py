@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+from enum import Enum
+
+
+class NodeStatus(Enum):
+    """Status of a node."""
+
+    WORKING = "working"
+    PENDING_CHANGES = "pending changes"
+    NO_CHANGES = "no changes"
+    NOT_CHECKED = "not checked"
+
 
 class Node:
     """A simple node class for demonstration purposes."""
@@ -10,10 +21,12 @@ class Node:
         self,
         name: str,
         parent: Node | None = None,
+        status: NodeStatus = NodeStatus.NOT_CHECKED,
     ):
         self.name = name
         self.parent = parent
         self.children: list[Node] = []
+        self.status = status
 
     def add_child(self, child: Node):
         """
