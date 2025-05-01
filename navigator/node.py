@@ -17,8 +17,6 @@ class Node:
 
     def add_child(self, child: Node):
         """
-        @nlmeta
-
         Add a child node.
         """
         # Make sure the child doesn't already belong to another parent
