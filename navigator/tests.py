@@ -40,11 +40,52 @@ def make_tree(size: int, seed: int) -> Node:
     return root
 
 
+def make_deep_tree(depth: int) -> Node:
+    """
+    Create a deep tree (a single linear chain) with the specified depth.
+    Each node has exactly one child, creating a straight line from root to leaf.
+    """
+    if depth <= 0:
+        raise ValueError("Tree depth must be positive")
+
+    # Create the root node
+    root = Node(name="root")
+    current_node = root
+
+    # Create a linear chain of nodes
+    for i in range(1, depth):
+        new_node = Node(name=f"level_{i}")
+        current_node.add_child(new_node)
+        current_node = new_node
+
+    return root
+
+
+def make_wide_tree(width: int) -> Node:
+    """
+    Create a wide tree where a single parent (root) has many children.
+    The tree has a minimal depth (just root and its children).
+    """
+    if width <= 0:
+        raise ValueError("Tree width must be positive")
+
+    # Create the root node
+    root = Node(name="root")
+
+    # Add children directly to the root
+    for i in range(width):
+        child = Node(name=f"child_{i}")
+        root.add_child(child)
+
+    return root
+
+
 def create_test_cases() -> dict[int, Node]:
     """
     Create test cases for the user study.
     """
     return {
+        # Original random trees
         1: make_tree(5, 1),
         2: make_tree(10, 1),
         3: make_tree(20, 1),
@@ -53,6 +94,14 @@ def create_test_cases() -> dict[int, Node]:
         6: make_tree(500, 1),
         7: make_tree(500, 2),
         8: make_tree(500, 3),
+        # Deep trees (linear chain)
+        9: make_deep_tree(10),  # Deep tree with 10 levels
+        10: make_deep_tree(50),  # Deep tree with 50 levels
+        11: make_deep_tree(100),  # Deep tree with 100 levels
+        # Wide trees (many children)
+        12: make_wide_tree(10),  # Wide tree with 10 children
+        13: make_wide_tree(50),  # Wide tree with 50 children
+        14: make_wide_tree(100),  # Wide tree with 100 children
     }
 
 
