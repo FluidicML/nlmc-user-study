@@ -544,7 +544,7 @@ Finally, add `NavigatorRenderer.render_node` as a dependency to the following fu
 
 - `NavigatorRenderer.measure_or_render_terminal`
 - `NavigatorRenderer.measure_or_render_tree`
-- `NavigatorRenderer._render_path_with_ellipses`
+- `NavigatorRenderer.measure_or_render_path_with_ellipses`
 
 Include a short hint so the LLM knows what it's supposed to do with this new dependency.
 
